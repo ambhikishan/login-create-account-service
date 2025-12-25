@@ -1,0 +1,11 @@
+spring:
+  application:
+    name: Login
+  r2dbc:
+    url: r2dbc:postgresql://localhost:5432/postgres
+    username: postgres
+    password: toor
+  sql:
+    init:
+      mode: always
+      platform: postgres
