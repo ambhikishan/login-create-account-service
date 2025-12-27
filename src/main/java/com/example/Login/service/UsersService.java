@@ -1,11 +1,13 @@
 package com.example.Login.service;
 
 import com.example.Login.dto.LoginDetails;
+import com.example.Login.dto.OTPDTO;
 import com.example.Login.pojo.Users;
 import com.example.Login.repo.LoginRepo;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
 
 import java.security.SecureRandom;
@@ -17,6 +19,9 @@ public class UsersService {
 
     @Autowired
     private LoginRepo loginRepo;
+
+    @Autowired
+    private WebClient webClient;
 
     public Mono<Users> login(LoginDetails login){
 
@@ -44,8 +49,11 @@ public Mono<Object> createAccount(Users user){
                 .flatMap(u->Mono.error(new RuntimeException("username already exists")))
                 .switchIfEmpty(Mono.defer(()->{
                     user.setPassword(bCryptPasswordEncoder.encode(user.getPassword()));
-                    return loginRepo.save(user);
-                }));
+                    return loginRepo.save(user).flatMap(users ->
+                    {       OTPDTO otpDto = new OTPDTO();
+                        otpDto.setEmail(user.getEmail());
+                            return  webClient.post().uri("/account-created").bodyValue(otpDto).retrieve().bodyToMono(String.class);})
+                ;}));
 
 
 }
