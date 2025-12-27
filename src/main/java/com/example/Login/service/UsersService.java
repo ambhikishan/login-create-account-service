@@ -48,6 +48,7 @@ public Mono<Object> createAccount(Users user){
         return loginRepo.findByUsername(user.getUsername())
                 .flatMap(u->Mono.error(new RuntimeException("username already exists")))
                 .switchIfEmpty(Mono.defer(()->{
+                    user.setVerified(false);
                     user.setPassword(bCryptPasswordEncoder.encode(user.getPassword()));
                     return loginRepo.save(user).flatMap(users ->
                     {       OTPDTO otpDto = new OTPDTO();
