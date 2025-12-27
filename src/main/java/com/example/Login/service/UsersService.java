@@ -8,6 +8,8 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 
+import java.security.SecureRandom;
+
 @Service
 public class UsersService {
     @Autowired
@@ -47,6 +49,28 @@ public Mono<Object> createAccount(Users user){
 
 
 }
+public String generateOTP()
+{
+    String numbers = "0123456789";
+
+    // 2. Use SecureRandom for cryptographic strength
+    SecureRandom random = new SecureRandom();
+
+    // 3. Use StringBuilder for efficient string manipulation
+    StringBuilder otp = new StringBuilder(6);
+
+    for (int i = 0; i < 6; i++) {
+        // 4. Get a random index from the numbers string
+        int index = random.nextInt(numbers.length());
+
+        // 5. Append the character at that index
+        otp.append(numbers.charAt(index));
+    }
+
+    return otp.toString();
+
+}
+
 
 
 

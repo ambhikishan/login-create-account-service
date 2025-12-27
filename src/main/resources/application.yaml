@@ -9,3 +9,9 @@ spring:
     init:
       mode: always
       platform: postgres
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      # password: your_password (if you have one)
+      timeout: 60000
