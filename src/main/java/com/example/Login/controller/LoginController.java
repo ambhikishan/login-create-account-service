@@ -1,5 +1,6 @@
 package com.example.Login.controller;
 
+import com.example.Login.dto.APIResponse;
 import com.example.Login.dto.LoginDetails;
 import com.example.Login.dto.OTPDTO;
 import com.example.Login.pojo.Users;
@@ -35,6 +36,11 @@ public class LoginController {
 
         return loginRepo.findAll();
     }
+    @DeleteMapping("/")
+    public Mono<ResponseEntity<String>> deleteAllUser() {
+        loginRepo.deleteAll().subscribe();
+        return Mono.just(ResponseEntity.ok("Deleted all Users"));
+    }
 
     @PostMapping("/login")
     public Mono<ResponseEntity<LoginDetails>> loginUser(@RequestBody LoginDetails user) {
@@ -43,8 +49,10 @@ public class LoginController {
             Mono<ResponseEntity<LoginDetails>> returnedUser = usersService.login(user).map(u1 -> {
                 loginDetails.setEmail(u1.getEmail());
                 loginDetails.setPassword(null);
+                loginDetails.setUsername(u1.getUsername());
                 loginDetails.setLoggedIn(true);
                 loginDetails.setId(u1.getId());
+                loginDetails.setVerified(u1.isVerified());
                 return ResponseEntity.ok(loginDetails);
             })
                     .switchIfEmpty(Mono.just(ResponseEntity.status(HttpStatus.UNAUTHORIZED).build()))
@@ -63,7 +71,7 @@ public class LoginController {
     }
 
     @GetMapping("/verify")
-public Mono<ResponseEntity<String>> verfifyAccount(@RequestParam String email) {
+public Mono<ResponseEntity<APIResponse>> verfifyAccount(@RequestParam String email) {
       return  loginRepo.findByEmail(email).flatMap(users -> {
           if(users.isVerified()==true) {
               return Mono.error(new RuntimeException("User is already verified"));
@@ -78,9 +86,9 @@ public Mono<ResponseEntity<String>> verfifyAccount(@RequestParam String email) {
                 .bodyValue(otpDTO)
                 .retrieve()
                 .bodyToMono(String.class)
-          .map(emailResponse -> ResponseEntity.ok("OTP sent successfully"));
+          .map(emailResponse ->  ResponseEntity.ok(new APIResponse(true,"OTP Sent Success")));
 
-        }).switchIfEmpty(Mono.just(ResponseEntity.badRequest().body("User not found")));
+        }).switchIfEmpty(Mono.just(ResponseEntity.badRequest().body(new APIResponse(false,"OTP Sent Failed User not registered"))));
 
     }
 
