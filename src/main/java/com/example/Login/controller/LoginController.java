@@ -5,6 +5,7 @@ import com.example.Login.dto.LoginDetails;
 import com.example.Login.dto.OTPDTO;
 import com.example.Login.pojo.Users;
 import com.example.Login.repo.LoginRepo;
+import com.example.Login.service.JwtService;
 import com.example.Login.service.RedisOtpService;
 import com.example.Login.service.UsersService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,11 +16,16 @@ import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import java.util.Map;
+
 @RestController
 public class LoginController {
 
     @Autowired
     private UsersService usersService;
+
+    @Autowired
+    private JwtService jwtService;
 
     @Autowired
     private LoginRepo loginRepo;
@@ -53,6 +59,7 @@ public class LoginController {
                 loginDetails.setLoggedIn(true);
                 loginDetails.setId(u1.getId());
                 loginDetails.setVerified(u1.isVerified());
+                loginDetails.setJwtToken(jwtService.generateToken(u1.getUsername()));
                 return ResponseEntity.ok(loginDetails);
             })
                     .switchIfEmpty(Mono.just(ResponseEntity.status(HttpStatus.UNAUTHORIZED).build()))
@@ -63,7 +70,23 @@ public class LoginController {
 
     return  returnedUser;
     }
+    @PostMapping("/validate-token")
+    public Mono<ResponseEntity<Users>> validateToken(@RequestParam String token) {
+        // Extract username from token (throws if invalid)
+        String username;
+        try {
+            username = jwtService.validateAndExtract(token);
+        } catch (Exception e) {
+            return Mono.just(ResponseEntity.status(HttpStatus.UNAUTHORIZED).build());
 
+        }
+
+        // Check if user exists
+        return loginRepo.findByUsername(username)
+                .map(user ->{ user.setPassword(""); return ResponseEntity.ok(user);})
+                .defaultIfEmpty(ResponseEntity.status(HttpStatus.UNAUTHORIZED).build());
+
+    }
     @PostMapping("create-account")
     public Mono<Object> createAccount(@RequestBody Users user) {
 
