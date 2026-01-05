@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.codec.multipart.FilePart;
@@ -32,7 +33,7 @@ public class ProfileDetails {
 
 
     @PostMapping(value = "/user/picture",consumes = MediaType.MULTIPART_FORM_DATA_VALUE )
-    public Object uploadPicture(@RequestPart FilePart filePart, @RequestHeader("Authorization") String token){
+    public Mono<ResponseEntity<Object>> uploadPicture(@RequestPart FilePart filePart, @RequestHeader("Authorization") String token){
 
         Path folder = Paths.get("C:\\Users\\ambhi\\OneDrive\\Pictures\\uploads");
         Path file = folder.resolve(UUID.randomUUID().toString() +filePart.filename());
@@ -49,7 +50,7 @@ public class ProfileDetails {
         }
         catch (RuntimeException e)
         {
-            return Mono.just(ResponseEntity.badRequest().body("Invalid Jwt and Upload failed"));
+            return Mono.just(ResponseEntity.status(HttpStatus.UNAUTHORIZED).build());
         }
 
     }
