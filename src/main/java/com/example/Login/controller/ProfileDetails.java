@@ -1,5 +1,6 @@
 package com.example.Login.controller;
 
+import com.example.Login.dto.PasswordDTO;
 import com.example.Login.repo.LoginRepo;
 import com.example.Login.service.JwtService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -10,17 +11,18 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.codec.multipart.FilePart;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 
 import java.io.File;
+import java.io.Serializable;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Map;
 import java.util.UUID;
-
-import static org.springframework.security.config.http.MatcherType.path;
 
 @RestController
 public class ProfileDetails {
@@ -30,6 +32,9 @@ public class ProfileDetails {
 
     @Autowired
     private JwtService jwtService;
+
+    @Autowired
+    private BCryptPasswordEncoder passwordEncoder;
 
 
     @PostMapping(value = "/user/picture",consumes = MediaType.MULTIPART_FORM_DATA_VALUE )
@@ -81,6 +86,38 @@ public class ProfileDetails {
             }
 
         });
+    }
+    @PostMapping("user/profile/change-password")
+    public Mono<ResponseEntity<Map<String,?>>> changePassword(@RequestBody PasswordDTO pwd, @RequestHeader("Authorization") String token)
+    {
+        if(token == null || token.isEmpty() || !token.startsWith("Bearer "))
+        {
+            return Mono.just(ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("success",false,"message","invalid token")));
+        }
+        if(pwd == null || pwd.getPassword().isEmpty() || pwd.getConfirmPassword().isEmpty() || !pwd.getPassword().equals(pwd.getConfirmPassword()))
+        {
+            return Mono.just(ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("success",false,"message","password error")));
+        }
+
+        String username;
+        try{
+            username = jwtService.validateAndExtract(token.substring(7));
+
+        }
+        catch (Exception e)
+        {
+            return Mono.just(ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("success",false,"message","jwt token expired")));
+        }
+        return loginRepo.findByUsername(username)
+            .flatMap(user -> {
+                // Always encode passwords
+                user.setPassword(passwordEncoder.encode(pwd.getPassword()));
+                return loginRepo.save(user);
+            })
+            .map(updatedUser ->
+                    ResponseEntity.ok(Map.of("success",true,"message","password changed successfully")));
+
+
     }
 
 
